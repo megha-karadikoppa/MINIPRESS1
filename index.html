@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MiniPress - Image Compressor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f9dbdb;
+      margin: 0;
+      padding: 50px 20px;
+    }
+
+    .container {
+      background: #fbe7e7;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+      width: 300px;
+      margin: auto;
+    }
+
+    input, button {
+      display: block;
+      width: 90%;
+      padding: 10px;
+      margin: 10px auto;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    button {
+      background-color: #620232;
+      color: rgb(252, 188, 188);
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #5d034b;
+    }
+
+    label {
+      font-size: 0.9rem;
+    }
+
+    #compressed-image {
+      margin-top: 15px;
+    }
+
+    svg {
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Registration Page -->
+  <div class="container" id="register-container" style="display: none;">
+    <h2>Register</h2>
+    <form id="register-form">
+      <input type="text" id="reg-username" placeholder="Create Username" required>
+      <input type="password" id="reg-password" placeholder="Create Password" required>
+      <input type="tel" id="reg-mobile" placeholder="Mobile Number" required>
+      <button type="button" id="send-otp">Send OTP</button>
+      <input type="text" id="otp" placeholder="Enter OTP" style="display: none;" required>
+      <button type="submit" id="verify-btn" style="display: none;">Verify & Register</button>
+    </form>
+  </div>
+
+  <!-- Login Page -->
+  <div class="container" id="login-container">
+    <h2>Login</h2>
+    <form id="login-form">
+      <input type="text" id="username" placeholder="Username" required>
+      <input type="password" id="password" placeholder="Password" required>
+      <button type="submit">Login</button>
+    </form>
+  </div>
+
+  <!-- Compressor Page -->
+  <div class="container" id="compressor-container" style="display: none;">
+    <!-- SVG Icon -->
+    <svg width="60" height="60" viewBox="0 0 64 64" fill="none">
+      <rect x="5" y="15" width="54" height="34" rx="6" fill="#ffdfdf" stroke="#620232" stroke-width="2"/>
+      <circle cx="32" cy="32" r="10" fill="#620232" stroke="#ffd3d3" stroke-width="3"/>
+      <rect x="10" y="10" width="10" height="10" rx="2" fill="#ffbaba" stroke="#620232" stroke-width="1"/>
+      <path d="M20 55 L32 45 L44 55" stroke="#620232" stroke-width="2" fill="none"/>
+      <path d="M20 9 L32 19 L44 9" stroke="#620232" stroke-width="2" fill="none"/>
+    </svg>
+
+    <h2>🖼️ MiniPress</h2>
+    <p>Compress images in your browser. No install needed!</p>
+    <input type="file" id="upload" accept="image/*">
+    <canvas id="canvas" style="display:none;"></canvas>
+    <input type="range" id="quality" min="0.1" max="1" step="0.1" value="0.8">
+    <label for="quality">Compression Quality: <span id="quality-value">0.8</span></label>
+    <button id="compress">Compress & Download</button>
+    <p id="size-info"></p>
+    <div id="compressed-image"></div>
+  </div>
+
+  <!-- Toggle Links -->
+  <p>
+    <a href="#" onclick="showRegister()">Create Account</a> |
+    <a href="#" onclick="showLogin()">Back to Login</a>
+  </p>
+
+  <!-- Script -->
+  <script>
+    let generatedOTP = "";
+    let registeredUser = null;
+
+    function showRegister() {
+      document.getElementById("login-container").style.display = "none";
+      document.getElementById("compressor-container").style.display = "none";
+      document.getElementById("register-container").style.display = "block";
+    }
+
+    function showLogin() {
+      document.getElementById("register-container").style.display = "none";
+      document.getElementById("compressor-container").style.display = "none";
+      document.getElementById("login-container").style.display = "block";
+    }
+
+    document.getElementById("send-otp").addEventListener("click", function () {
+      const mobile = document.getElementById("reg-mobile").value;
+      if (mobile.length < 10) return alert("Enter a valid mobile number");
+
+      generatedOTP = Math.floor(1000 + Math.random() * 9000).toString();
+      alert(`📱 Your OTP is: ${generatedOTP}`);
+
+      document.getElementById("otp").style.display = "block";
+      document.getElementById("verify-btn").style.display = "block";
+    });
+
+    document.getElementById("register-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const enteredOTP = document.getElementById("otp").value;
+      if (enteredOTP !== generatedOTP) return alert("❌ Incorrect OTP");
+
+      const user = document.getElementById("reg-username").value;
+      const pass = document.getElementById("reg-password").value;
+
+      if (!/^[A-Z]/.test(pass) || !/[0-9]/.test(pass) || !/[^A-Za-z0-9]/.test(pass)) {
+        return alert("Password must start with a capital letter, include a number and special character.");
+      }
+
+      registeredUser = { username: user, password: pass };
+      alert("✅ Registration successful!");
+      showLogin();
+    });
+
+    document.getElementById("login-form").addEventListener("submit", function (event) {
+      event.preventDefault();
+      const user = document.getElementById("username").value;
+      const pass = document.getElementById("password").value;
+
+      if (!registeredUser || user !== registeredUser.username || pass !== registeredUser.password) {
+        return alert("❌ Invalid login credentials");
+      }
+
+      document.getElementById("login-container").style.display = "none";
+      document.getElementById("compressor-container").style.display = "block";
+    });
+
+    document.getElementById("quality").addEventListener("input", function () {
+      document.getElementById("quality-value").innerText = this.value;
+    });
+
+    let originalFileSize = 0;
+
+    document.getElementById("upload").addEventListener("change", function () {
+      const file = this.files[0];
+      if (file) {
+        originalFileSize = file.size;
+        const kb = (originalFileSize / 1024).toFixed(2);
+        document.getElementById("size-info").innerText = `Original size: ${kb} KB`;
+      }
+    });
+
+    document.getElementById("compress").addEventListener("click", function () {
+      const fileInput = document.getElementById("upload");
+      const canvas = document.getElementById("canvas");
+      const quality = parseFloat(document.getElementById("quality").value);
+
+      if (!fileInput.files.length) {
+        alert("Please upload an image first.");
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+
+      reader.onload = function (e) {
+        const img = new Image();
+        img.onload = function () {
+          const ctx = canvas.getContext("2d");
+
+          const scaleFactor = 0.5;
+          const newWidth = img.width * scaleFactor;
+          const newHeight = img.height * scaleFactor;
+
+          canvas.width = newWidth;
+          canvas.height = newHeight;
+          ctx.drawImage(img, 0, 0, newWidth, newHeight);
+
+          canvas.toBlob(function (blob) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "compressed-image.jpg";
+            link.textContent = "Download Compressed Image";
+            link.style.display = "block";
+            link.style.marginTop = "10px";
+
+            const originalKB = (originalFileSize / 1024).toFixed(2);
+            const compressedKB = (blob.size / 1024).toFixed(2);
+            const reducedKB = (originalKB - compressedKB).toFixed(2);
+
+            document.getElementById("size-info").innerText =
+              `Original size: ${originalKB} KB\nCompressed size: ${compressedKB} KB\nSize reduced: ${reducedKB} KB`;
+
+            const imgPreview = new Image();
+            imgPreview.src = url;
+            imgPreview.style.maxWidth = "100%";
+            imgPreview.style.marginTop = "10px";
+
+            const container = document.getElementById("compressed-image");
+            container.innerHTML = "";
+            container.appendChild(imgPreview);
+            container.appendChild(link);
+          }, "image/jpeg", quality);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  </script>
+
+</body>
+</html>
